@@ -382,47 +382,66 @@
         // ===== 局域网设备Ping（随机检测2-3个设备） =====
         async function scanLAN() {
             const listEl = document.getElementById('deviceList');
-            listEl.innerHTML = '<div style="color: var(--text-secondary); padding: 10px 0;"><span class="spinner"></span> 正在检测局域网设备...</div>';
+            listEl.innerHTML = '<div style="color: var(--text-secondary); padding: 10px 0;"><span class="spinner"></span> 正在检测局域网设备延迟...</div>';
 
-            const foundDevices = [];
-
-            // 测试常见局域网设备IP（网关、路由器等）
-            const testDevices = [
-                { ip: '192.168.1.1', name: '路由器1' },
-                { ip: '192.168.0.1', name: '路由器2' },
-                { ip: '192.168.99.1', name: '网关' },
-                { ip: '10.0.0.1', name: '内网设备' },
+            // 常见局域网IP地址池
+            const ipPool = [
+                '192.168.1.1', '192.168.1.2', '192.168.1.100', '192.168.1.101',
+                '192.168.0.1', '192.168.0.2', '192.168.0.100',
+                '192.168.99.1', '192.168.99.2', '192.168.99.100',
+                '10.0.0.1', '10.0.0.2',
+                '192.168.2.1', '192.168.2.2',
             ];
 
-            // 随机选2-3个测试
-            const shuffled = testDevices.sort(() => Math.random() - 0.5).slice(0, 3);
+            // 随机选择3个IP
+            const shuffled = ipPool.sort(() => Math.random() - 0.5).slice(0, 3);
+            const results = [];
 
-            for (const device of shuffled) {
-                try {
-                    const start = performance.now();
-                    await fetch(`http://${device.ip}/`, {
-                        mode: 'no-cors',
-                        cache: 'no-store'
+            // 对每个设备进行多次ping取平均值
+            for (const ip of shuffled) {
+                let latencies = [];
+                let reachable = false;
+
+                // 尝试3次ping
+                for (let i = 0; i < 3; i++) {
+                    try {
+                        const start = performance.now();
+                        await fetch(`http://${ip}/`, {
+                            mode: 'no-cors',
+                            cache: 'no-store'
+                        });
+                        latencies.push(performance.now() - start);
+                        reachable = true;
+                    } catch (e) {
+                        // 设备不响应
+                    }
+                }
+
+                if (reachable && latencies.length > 0) {
+                    const avgLatency = latencies.reduce((a, b) => a + b, 0) / latencies.length;
+                    results.push({
+                        ip: ip,
+                        latency: avgLatency,
+                        status: 'reachable'
                     });
-                    const latency = performance.now() - start;
-                    foundDevices.push({ ip: device.ip, latency: latency });
-                } catch (e) {
-                    // 设备不响应，记录但延迟设为N/A
-                    foundDevices.push({ ip: device.ip, latency: null });
+                } else {
+                    results.push({
+                        ip: ip,
+                        latency: null,
+                        status: 'unreachable'
+                    });
                 }
             }
 
             // 显示结果
-            if (foundDevices.length > 0) {
-                listEl.innerHTML = foundDevices.map(d => `
-                    <div class="device-item">
-                        <span class="device-ip">${d.ip}</span>
-                        <span class="device-latency ${d.latency === null ? 'status-bad' : d.latency < 100 ? 'status-good' : d.latency < 500 ? 'status-warning' : 'status-bad'}">${d.latency !== null ? d.latency.toFixed(0) + ' ms' : 'N/A'}</span>
-                    </div>
-                `).join('');
-            } else {
-                listEl.innerHTML = '<div style="color: var(--text-secondary); padding: 10px 0;">无法检测（iOS限制）</div>';
-            }
+            listEl.innerHTML = results.map(r => `
+                <div class="device-item">
+                    <span class="device-ip">${r.ip}</span>
+                    <span class="device-latency ${r.status === 'unreachable' ? 'status-bad' : r.latency < 50 ? 'status-good' : r.latency < 150 ? 'status-warning' : 'status-bad'}">
+                        ${r.status === 'reachable' ? r.latency.toFixed(1) + ' ms' : '不可达'}
+                    </span>
+                </div>
+            `).join('');
         }
 
         // ===== 地址信息 =====
