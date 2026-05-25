@@ -1,0 +1,679 @@
+<!--
+使用说明：
+1. 通过 Safari 打开此文件（不能直接从文件管理器打开）
+2. 或者将此文件上传到任意网站，通过网址访问
+3. 在 Safari 中点击"分享" → "添加到主屏幕"可像 App 使用
+-->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="网络测试">
+    <title>网络质量测试工具</title>
+    <link rel="apple-touch-icon" href="icon.png">
+    <style>
+        :root {
+            --primary: #007AFF;
+            --success: #34C759;
+            --warning: #FF9500;
+            --danger: #FF3B30;
+            --bg: #000000;
+            --card-bg: #1C1C1E;
+            --text: #FFFFFF;
+            --text-secondary: #8E8E93;
+            --border: #38383A;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+            padding-top: 60px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 8px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title .icon {
+            width: 24px;
+            height: 24px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .info-item {
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .info-value {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 12px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:active {
+            background: #0056CC;
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background: var(--card-bg);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .btn-grid .btn {
+            margin-bottom: 0;
+            padding: 14px;
+            font-size: 15px;
+        }
+
+        .result-box {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 12px;
+            font-family: 'SF Mono', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-good {
+            background: rgba(52, 199, 89, 0.2);
+            color: var(--success);
+        }
+
+        .status-bad {
+            background: rgba(255, 59, 48, 0.2);
+            color: var(--danger);
+        }
+
+        .status-warning {
+            background: rgba(255, 149, 0, 0.2);
+            color: var(--warning);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--text-secondary);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .tabs {
+            display: flex;
+            background: var(--card-bg);
+            border-radius: 12px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            font-size: 14px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        .table th, .table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        .table th {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .speed-display {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .speed-value {
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .speed-unit {
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .speed-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* iOS-style bottom safe area */
+        .safe-area {
+            height: 34px;
+        }
+
+        /* Add to Home Screen prompt */
+        .a2hs-prompt {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--card-bg);
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 100;
+        }
+
+        .a2hs-prompt .close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 24px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>网络质量测试</h1>
+        <p>iOS Web App Edition</p>
+    </div>
+
+    <!-- Network Info Card -->
+    <div class="card" id="infoCard">
+        <div class="card-title">
+            <span>网络信息</span>
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">连接状态</div>
+                <div class="info-value" id="connectionStatus">检测中...</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">网络类型</div>
+                <div class="info-value" id="connectionType">--</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">下行速度</div>
+                <div class="info-value" id="downlink">--</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">往返时间</div>
+                <div class="info-value" id="rtt">--</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Speed Test Card -->
+    <div class="card">
+        <div class="card-title">
+            <span>速度测试</span>
+        </div>
+        <div class="speed-display">
+            <div class="speed-value" id="speedResult">--</div>
+            <div class="speed-unit">Mbps</div>
+            <div class="speed-label">下载速度</div>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="speedProgress"></div>
+        </div>
+        <button class="btn btn-primary" onclick="runSpeedTest()">
+            开始测速
+        </button>
+    </div>
+
+    <!-- Ping Test Card -->
+    <div class="card">
+        <div class="card-title">
+            <span>Ping 测试</span>
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Google DNS</div>
+                <div class="info-value" id="pingGoogle">--</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Cloudflare</div>
+                <div class="info-value" id="pingCloudflare">--</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">百度</div>
+                <div class="info-value" id="pingBaidu">--</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">本网关</div>
+                <div class="info-value" id="pingGateway">--</div>
+            </div>
+        </div>
+        <button class="btn btn-secondary" onclick="runPingTest()">
+            测试延迟
+        </button>
+    </div>
+
+    <!-- Connectivity Test -->
+    <div class="card">
+        <div class="card-title">
+            <span>连通性检测</span>
+        </div>
+        <div class="result-box" id="connectivityResult">
+            点击下方按钮开始检测
+        </div>
+        <button class="btn btn-secondary" onclick="checkConnectivity()">
+            检测连通性
+        </button>
+    </div>
+
+    <!-- DNS Test -->
+    <div class="card">
+        <div class="card-title">
+            <span>DNS 解析</span>
+        </div>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">google.com</div>
+                <div class="info-value" id="dnsGoogle">--</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">baidu.com</div>
+                <div class="info-value" id="dnsBaidu">--</div>
+            </div>
+        </div>
+        <button class="btn btn-secondary" onclick="testDNS()">
+            DNS 测试
+        </button>
+    </div>
+
+    <!-- Test All Button -->
+    <button class="btn btn-primary" style="background: var(--success);" onclick="runAllTests()">
+        全面测试
+    </button>
+
+    <!-- Summary Card -->
+    <div class="card" id="summaryCard" style="display: none;">
+        <div class="card-title">
+            <span>测试报告</span>
+        </div>
+        <div class="result-box" id="summaryResult"></div>
+    </div>
+
+    <!-- Add to Home Screen Prompt -->
+    <div class="a2hs-prompt" id="a2hsPrompt" style="display: none;">
+        <div style="flex: 1;">
+            <strong>添加到主屏幕</strong>
+            <p style="font-size: 12px; color: var(--text-secondary);">点击分享按钮，选择"添加到主屏幕"</p>
+        </div>
+        <button class="close" onclick="hideA2HS()">×</button>
+    </div>
+
+    <div class="safe-area"></div>
+
+    <script>
+        // Network Information API
+        function getNetworkInfo() {
+            const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+
+            if (connection) {
+                document.getElementById('connectionType').textContent = connection.effectiveType || '未知';
+                document.getElementById('downlink').textContent = connection.downlink ? `${connection.downlink} Mbps` : '未知';
+                document.getElementById('rtt').textContent = connection.rtt ? `${connection.rtt} ms` : '未知';
+            }
+
+            // Check online status
+            if (navigator.onLine) {
+                document.getElementById('connectionStatus').innerHTML = '<span class="status-badge status-good">已连接</span>';
+            } else {
+                document.getElementById('connectionStatus').innerHTML = '<span class="status-badge status-bad">未连接</span>';
+            }
+        }
+
+        // Speed Test using download timing
+        async function runSpeedTest() {
+            const speedResult = document.getElementById('speedResult');
+            const speedProgress = document.getElementById('speedProgress');
+
+            speedResult.innerHTML = '<span class="spinner"></span>';
+            speedProgress.style.width = '0%';
+
+            const testUrls = [
+                'https://speed.cloudflare.com/__down?bytes=500000',
+                'https://www.baidu.com/favicon.ico',
+            ];
+
+            let totalBytes = 0;
+            let totalTime = 0;
+
+            for (let i = 0; i < testUrls.length; i++) {
+                speedProgress.style.width = `${(i + 1) * 50}%`;
+
+                try {
+                    const start = performance.now();
+                    const response = await fetch(testUrls[i], {
+                        mode: 'no-cors',
+                        cache: 'no-store'
+                    });
+                    const end = performance.now();
+
+                    // Estimate bytes (we can't read content with no-cors)
+                    const estimatedBytes = i === 0 ? 500000 : 1000;
+                    totalBytes += estimatedBytes;
+                    totalTime += (end - start);
+
+                } catch (e) {
+                    console.log('Speed test error:', e);
+                }
+            }
+
+            // Calculate speed
+            if (totalTime > 0) {
+                const speedMbps = (totalBytes * 8 / totalTime / 1000).toFixed(2);
+                speedResult.textContent = speedMbps;
+            } else {
+                speedResult.textContent = '失败';
+            }
+
+            speedProgress.style.width = '100%';
+        }
+
+        // Ping Test (latency measurement)
+        async function measureLatency(url, elementId) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = '<span class="spinner"></span>';
+
+            const iterations = 3;
+            let latencies = [];
+
+            for (let i = 0; i < iterations; i++) {
+                try {
+                    const start = performance.now();
+                    await fetch(url, { mode: 'no-cors', cache: 'no-store' });
+                    const end = performance.now();
+                    latencies.push(end - start);
+                } catch (e) {
+                    latencies.push(9999);
+                }
+            }
+
+            const avgLatency = latencies.reduce((a, b) => a + b, 0) / latencies.length;
+
+            if (avgLatency < 100) {
+                element.innerHTML = `<span class="status-badge status-good">${avgLatency.toFixed(0)}ms</span>`;
+            } else if (avgLatency < 300) {
+                element.innerHTML = `<span class="status-badge status-warning">${avgLatency.toFixed(0)}ms</span>`;
+            } else {
+                element.innerHTML = `<span class="status-badge status-bad">${avgLatency.toFixed(0)}ms</span>`;
+            }
+        }
+
+        async function runPingTest() {
+            await Promise.all([
+                measureLatency('https://8.8.8.8/', 'pingGoogle'),
+                measureLatency('https://1.1.1.1/', 'pingCloudflare'),
+                measureLatency('https://www.baidu.com/favicon.ico', 'pingBaidu'),
+            ]);
+
+            document.getElementById('pingGateway').textContent = 'N/A';
+        }
+
+        // Connectivity Check
+        async function checkConnectivity() {
+            const resultBox = document.getElementById('connectivityResult');
+            resultBox.innerHTML = '检测中...\n';
+
+            const hosts = [
+                { name: 'Google DNS', url: 'https://8.8.8.8/' },
+                { name: 'Cloudflare', url: 'https://1.1.1.1/' },
+                { name: '百度', url: 'https://www.baidu.com/' },
+                { name: '腾讯', url: 'https://www.qq.com/' },
+                { name: '阿里', url: 'https://www.aliyun.com/' },
+            ];
+
+            let results = [];
+
+            for (const host of hosts) {
+                try {
+                    const start = performance.now();
+                    await fetch(host.url, { mode: 'no-cors', cache: 'no-store', timeout: 5000 });
+                    const latency = performance.now() - start;
+                    results.push(`${host.name}: ✓ ${latency.toFixed(0)}ms`);
+                } catch (e) {
+                    results.push(`${host.name}: ✗ 无法连接`);
+                }
+            }
+
+            resultBox.innerHTML = results.join('\n');
+        }
+
+        // DNS Test (via fetch timing)
+        async function testDNS() {
+            document.getElementById('dnsGoogle').innerHTML = '<span class="spinner"></span>';
+            document.getElementById('dnsBaidu').innerHTML = '<span class="spinner"></span>';
+
+            try {
+                const start1 = performance.now();
+                await fetch('https://www.google.com/favicon.ico', { mode: 'no-cors' });
+                const latency1 = performance.now() - start1;
+                document.getElementById('dnsGoogle').textContent = `${latency1.toFixed(0)}ms`;
+            } catch (e) {
+                document.getElementById('dnsGoogle').textContent = '失败';
+            }
+
+            try {
+                const start2 = performance.now();
+                await fetch('https://www.baidu.com/favicon.ico', { mode: 'no-cors' });
+                const latency2 = performance.now() - start2;
+                document.getElementById('dnsBaidu').textContent = `${latency2.toFixed(0)}ms`;
+            } catch (e) {
+                document.getElementById('dnsBaidu').textContent = '失败';
+            }
+        }
+
+        // Run All Tests
+        async function runAllTests() {
+            const summaryCard = document.getElementById('summaryCard');
+            const summaryResult = document.getElementById('summaryResult');
+
+            summaryResult.innerHTML = '正在执行全面测试...\n';
+            summaryCard.style.display = 'block';
+
+            getNetworkInfo();
+            await runSpeedTest();
+            await runPingTest();
+            await testDNS();
+            await checkConnectivity();
+
+            // Generate summary
+            const speed = document.getElementById('speedResult').textContent;
+            const pingGoogle = document.getElementById('pingGoogle').textContent;
+            const pingBaidu = document.getElementById('pingBaidu').textContent;
+
+            summaryResult.innerHTML = `
+╔════════════════════════════════╗
+║       网络测试报告             ║
+╠════════════════════════════════╣
+
+【速度测试】
+  下载速度: ${speed} Mbps
+
+【延迟测试】
+  Google: ${pingGoogle}
+  百度: ${pingBaidu}
+
+【连接状态】
+  ${navigator.onLine ? '✓ 互联网已连接' : '✗ 互联网未连接'}
+
+【测试时间】
+  ${new Date().toLocaleString()}
+
+╚════════════════════════════════╝
+            `;
+        }
+
+        // Add to Home Screen detection
+        let deferredPrompt;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            deferredPrompt = e;
+            document.getElementById('a2hsPrompt').style.display = 'flex';
+        });
+
+        function hideA2HS() {
+            document.getElementById('a2hsPrompt').style.display = 'none';
+        }
+
+        // iOS standalone mode detection
+        if (navigator.standalone) {
+            console.log('Running in standalone mode');
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            getNetworkInfo();
+
+            // Show A2HS hint for iOS
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            if (isIOS && !navigator.standalone) {
+                setTimeout(() => {
+                    document.getElementById('a2hsPrompt').style.display = 'flex';
+                }, 3000);
+            }
+        });
+
+        // Listen for online/offline events
+        window.addEventListener('online', getNetworkInfo);
+        window.addEventListener('offline', getNetworkInfo);
+    </script>
+</body>
+</html>
