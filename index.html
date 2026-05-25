@@ -332,18 +332,26 @@
         async function runPingTest() {
             document.getElementById('avgPing').innerHTML = '<span class="spinner"></span>';
             document.getElementById('jitter').innerHTML = '<span class="spinner"></span>';
+            document.getElementById('minPing').innerHTML = '<span class="spinner"></span>';
+            document.getElementById('maxPing').innerHTML = '<span class="spinner"></span>';
 
             const latencies = [];
             const iterations = 10;
-            const testUrl = 'https://8.8.8.8/';
+            // 使用百度和阿里测试（不使用Google）
+            const testUrls = [
+                'https://www.baidu.com/favicon.ico',
+                'https://www.aliyun.com/favicon.ico'
+            ];
 
             for (let i = 0; i < iterations; i++) {
-                try {
-                    const start = performance.now();
-                    await fetch(testUrl, { mode: 'no-cors', cache: 'no-store' });
-                    latencies.push(performance.now() - start);
-                } catch (e) {
-                    latencies.push(null);
+                for (const url of testUrls) {
+                    try {
+                        const start = performance.now();
+                        await fetch(url, { mode: 'no-cors', cache: 'no-store' });
+                        latencies.push(performance.now() - start);
+                    } catch (e) {
+                        // 忽略错误
+                    }
                 }
             }
 
@@ -352,6 +360,7 @@
                 const avg = validLatencies.reduce((a, b) => a + b, 0) / validLatencies.length;
                 const min = Math.min(...validLatencies);
                 const max = Math.max(...validLatencies);
+                // 抖动 = 延迟变化的标准差估算
                 const jitter = max - min;
 
                 document.getElementById('avgPing').textContent = `${avg.toFixed(1)} ms`;
@@ -365,63 +374,54 @@
             } else {
                 document.getElementById('avgPing').textContent = '--';
                 document.getElementById('jitter').textContent = '--';
+                document.getElementById('minPing').textContent = '--';
+                document.getElementById('maxPing').textContent = '--';
             }
         }
 
-        // ===== 局域网扫描 =====
+        // ===== 局域网设备Ping（随机检测2-3个设备） =====
         async function scanLAN() {
             const listEl = document.getElementById('deviceList');
-            listEl.innerHTML = '<div style="color: var(--text-secondary); padding: 10px 0;"><span class="spinner"></span> 正在扫描局域网...</div>';
+            listEl.innerHTML = '<div style="color: var(--text-secondary); padding: 10px 0;"><span class="spinner"></span> 正在检测局域网设备...</div>';
 
-            // 获取本机网段
-            let myIP = '192.168.1';
-            let foundDevices = [];
+            const foundDevices = [];
 
-            // 尝试常见网段
-            const commonSubnets = ['192.168.1', '192.168.0', '192.168.2', '10.0.0', '192.168.99'];
+            // 测试常见局域网设备IP（网关、路由器等）
+            const testDevices = [
+                { ip: '192.168.1.1', name: '路由器1' },
+                { ip: '192.168.0.1', name: '路由器2' },
+                { ip: '192.168.99.1', name: '网关' },
+                { ip: '10.0.0.1', name: '内网设备' },
+            ];
 
-            for (const subnet of commonSubnets) {
-                // 扫描网段内的常见IP（网关、常用设备）
-                const testIPs = [1, 2, 100, 101, 102, 110, 120, 200, 254];
+            // 随机选2-3个测试
+            const shuffled = testDevices.sort(() => Math.random() - 0.5).slice(0, 3);
 
-                for (const ipSuffix of testIPs) {
-                    const testIP = `${subnet}.${ipSuffix}`;
-                    try {
-                        const start = performance.now();
-                        // 尝试 HTTP 请求（大多数设备有HTTP服务）
-                        await fetch(`http://${testIP}/`, {
-                            mode: 'no-cors',
-                            cache: 'no-store',
-                            timeout: 2000
-                        });
-                        const latency = performance.now() - start;
-                        foundDevices.push({ ip: testIP, latency: latency });
-                    } catch (e) {
-                        // 设备可能不响应，忽略
-                    }
+            for (const device of shuffled) {
+                try {
+                    const start = performance.now();
+                    await fetch(`http://${device.ip}/`, {
+                        mode: 'no-cors',
+                        cache: 'no-store'
+                    });
+                    const latency = performance.now() - start;
+                    foundDevices.push({ ip: device.ip, latency: latency });
+                } catch (e) {
+                    // 设备不响应，记录但延迟设为N/A
+                    foundDevices.push({ ip: device.ip, latency: null });
                 }
             }
-
-            // 按 IP 排序
-            foundDevices.sort((a, b) => {
-                const aParts = a.ip.split('.').map(Number);
-                const bParts = b.ip.split('.').map(Number);
-                for (let i = 0; i < 4; i++) {
-                    if (aParts[i] !== bParts[i]) return aParts[i] - bParts[i];
-                }
-                return 0;
-            });
 
             // 显示结果
             if (foundDevices.length > 0) {
                 listEl.innerHTML = foundDevices.map(d => `
                     <div class="device-item">
                         <span class="device-ip">${d.ip}</span>
-                        <span class="device-latency ${d.latency < 100 ? 'status-good' : d.latency < 500 ? 'status-warning' : 'status-bad'}">${d.latency.toFixed(0)} ms</span>
+                        <span class="device-latency ${d.latency === null ? 'status-bad' : d.latency < 100 ? 'status-good' : d.latency < 500 ? 'status-warning' : 'status-bad'}">${d.latency !== null ? d.latency.toFixed(0) + ' ms' : 'N/A'}</span>
                     </div>
                 `).join('');
             } else {
-                listEl.innerHTML = '<div style="color: var(--text-secondary); padding: 10px 0;">未发现局域网设备（iOS限制）</div>';
+                listEl.innerHTML = '<div style="color: var(--text-secondary); padding: 10px 0;">无法检测（iOS限制）</div>';
             }
         }
 
